@@ -17,8 +17,7 @@ from .options import ALL_PARSERS, setup_arguments, get_agent
 from anicli_ru import Aniboom
 
 args = setup_arguments()
-
-PLAYER = "mpv"
+PLAYER = args.PLAYER
 OS_HEADERS_COMMAND = "http-header-fields"
 
 # load chosen extractor

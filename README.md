@@ -1,19 +1,34 @@
 # anicli-ru
 [![CI](https://github.com/vypivshiy/ani-cli-ru/actions/workflows/ci.yml/badge.svg)](https://github.com/vypivshiy/ani-cli-ru/actions/workflows/ci.yml)
 ___
-Скрипт для поиска и просмотра аниме из терминала с русской озвучкой или субтитрами для linux систем, 
+Скрипт для поиска и просмотра аниме из терминала с русской озвучкой или субтитрами, 
 написанный на python.
 
 Парсит видео со сторонних сайтов, **как youtube-dl**.
+___
+# Отличия этого форка
+Этот форк AniCli-Ru имеет следующие отличительные особенности:
+* Добавлена поддержка "SovetRomantica", позволяющего просматривать аниме с этого сайта.
+* Добавлена возможность выбора видеоплеера для просмотра видео.
+* По умолчанию для операционной системы macOS используется видеоплеер "iina" в качестве основного. Это объясняется удобством и функциональностью данного плеера для Apple Silicon.
 ___
 # Supported video hostings:
 * sibnet
 * aniboom
 * kodik
+* sovetromantica
+* anilibria
+* animevost
+---
+___
+# Supported video player:
+Список проверненных плееров
+* iina
+* vlc
+* mpv
 ---
 # Dependencies:
 * python 3.7+
-* mpv
 * ffmpeg (опционально, для скачивания видео через аргумент "**-d**")
 ___
 # Install:
@@ -21,12 +36,9 @@ ___
 # Если у вас установлен скрипт версией ниже 4.0.0, то перед обновлением удалите старый файл запуска командой:
 sudo rm /usr/local/bin/anicli-ru
 
-# установка 
-python3 -m pip install anicli-ru
+установить вручную:
 
-# или клонировать и установить вручную:
-
-git clone https://github.com/vypivshiy/ani-cli-ru && cd ani-cli-ru
+git clone https://github.com/EdemBey/ani-cli-ru && cd ani-cli-ru
 pip install .
 ```
 ___

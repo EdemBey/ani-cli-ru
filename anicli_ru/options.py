@@ -1,6 +1,7 @@
 import argparse
 from os import system
 from typing import Optional
+from sys import platform
 
 from anicli_ru.loader import all_extractors
 from anicli_ru.__version__ import __version__
@@ -10,6 +11,7 @@ ALL_PARSERS = dict(enumerate(all_extractors()))
 
 
 def setup_arguments() -> argparse.Namespace:
+    player = "iina" if(platform == 'darwin') else "mpv"
     parser = argparse.ArgumentParser(description=f"anicli-ru {__version__}\n"
                                                  f"See detail info: https://github.com/vypivshiy/ani-cli-ru",
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -18,6 +20,11 @@ def setup_arguments() -> argparse.Namespace:
                         default=False,
                         action="store_true",
                         help="Download mode. Default False. ffmpeg required")
+    parser.add_argument("-pl", "--player",
+                        dest="PLAYER",
+                        type=str,
+                        default=player,
+                        help="Change player. Default for MacOS - iina, for other - mpv")
     parser.add_argument("-q", "--quality",
                         dest="QUALITY",
                         type=int,
