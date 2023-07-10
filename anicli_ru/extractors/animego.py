@@ -16,23 +16,41 @@ class Anime(BaseAnimeHTTP):
         resp = self.session.get(self.BASE_URL).text
         return Ongoing.parse(resp)
 
+
     def episodes(self, result: Union[AnimeResult, Ongoing]) -> ResultList[Episode]:  # type: ignore
         resp = self.session.get(f"{self.BASE_URL}anime/{result.id}/player?_allow=true").json()["content"]
+
+        if result.type == 'movie':
+            episode_div = '<div data-episode="1" data-episode-type="" data-id="{}" data-episode-title="{}"></div>'.format(result.id, result.title)
+            resp+= episode_div
+            
+        pattern = r'data-episode-type="(\w*)"'
+        regex = re.compile(pattern)
+        resp = regex.sub('data-episode-type="{}"'.format(result.type), resp)
+
         return Episode.parse(resp)
 
     def players(self, episode: Episode) -> ResultList[Player]:  # type: ignore
-        resp = self.session.get(f"{self.BASE_URL}anime/series",
-                                params={"dubbing": 2, "provider": 24,
-                                        "episode": episode.num, "id": episode.id}).json()["content"]
+        if episode.type != 'movie':
+            url = f"{self.BASE_URL}anime/series"
+            params={"dubbing": 2, "provider": 24,
+                                            "episode": episode.num, "id": episode.id}
+        else:
+            url = f"{self.BASE_URL}anime/{episode.id}/player"
+            params = None
+        resp = self.session.get(url, params = params).json()["content"]
         return Player.parse(resp)
 
 
 class AnimeResult(BaseAnimeResult):
     REGEX = {"url": re.compile(r'<a href="(https://animego\.org/anime/.*)" title=".*?">'),
-             "title": re.compile(r'<a href="https://animego\.org/anime/.*" title="(.*?)">')}
+             "title": re.compile(r'<a href="https://animego\.org/anime/.*" title="(.*?)">'),
+             "type": re.compile(r'type/(.*?)">')
+             }
     ANIME_HTTP = Anime()
     url: str
     title: str
+    type: str
 
     @property
     def id(self) -> str:
@@ -116,11 +134,13 @@ class Episode(BaseEpisode):
     ANIME_HTTP = Anime()
     REGEX = {"num": re.compile(r'data-episode="(\d+)"'),
              "id": re.compile(r'data-id="(\d+)"'),
-             "name": re.compile(r'data-episode-title="(.*)"')
+             "name": re.compile(r'data-episode-title="([^"]+)"'),
+             "type": re.compile(r'data-episode-type="([^"]+)"'),
              }
     num: int
     name: str
     id: int
+    type: str
 
     def __str__(self):
         return f"{self.name}"

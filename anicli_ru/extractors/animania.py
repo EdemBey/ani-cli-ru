@@ -32,7 +32,27 @@ class Anime(BaseAnimeHTTP):
         # get players from episode object
         raise NotImplementedError
 
+    def movie(self, html: str):
+        videos = []
+        url = re.compile(r'<meta property="og:video" content="([^"]+)">').findall(html)[0]
+        r = self.session.get('http:' + url).text
 
+        dubspattern = re.compile(r'data-title="([^"]+)"')
+        idpattern = re.compile(r'data-media-id="([^"]+)"')
+        hashpattern = re.compile(r'data-media-hash="([^"]+)"')
+
+        dubs = [(str(index+1), value) for index, value in enumerate(dubspattern.findall(r))]
+        id_values = idpattern.findall(r)
+        hash_values = hashpattern.findall(r)
+        domain = re.compile(r'"pd"\s*:\s*"([^"]+)"').findall(r)[0]
+
+        result = [f"//{domain}/video/{id}/{hash}/720p" for id, hash in zip(id_values, hash_values)]
+
+        for video in result:
+            videos.append([video])
+
+        return dubs, videos
+    
 class AnimeResult(BaseAnimeResult):
     ANIME_HTTP = Anime()
     REGEX = {"url": re.compile(r'<a class="short-poster img-box" href="(.*?\.html)" data-title=".*?: .*?"'),
@@ -109,6 +129,7 @@ class Episode(BaseEpisode):
         "videos": re.compile(r"""<span onclick="kodikSlider\.player\('(.*?)', this\);">"""),
         "num": re.compile(r'data-episode="(\d+)"'),
         "name": re.compile(r'data-episode-title="(.*)"'),
+        "type": re.compile(r'property="og:video" content="//[^/]+/([^/]+)/'),
     }
     dub_id: int
     dub_name: str
@@ -126,11 +147,17 @@ class Episode(BaseEpisode):
             _players.append(p)
         return _players
 
+ 
+
     @classmethod
     def parse(cls, html: str) -> ResultList:
         videos_chunks = cls.REGEX["video_chunks"].findall(html)
         dubs = cls.REGEX["dubs"].findall(html)
+        type = cls.REGEX["type"].findall(html)[0]
         videos = [cls.REGEX["videos"].findall(chunk[0]) for chunk in videos_chunks]
+        if type == 'video':
+            a = Anime()
+            (dubs, videos) = a.movie(html)
         return [cls(**{"dub_id": dub_id, "dub_name": dub_name, "count": count, "videos": video})
                 for dub_id, dub_name, count, video in zip([int(n[0]) for n in dubs],
                                                           [n[1] for n in dubs],
