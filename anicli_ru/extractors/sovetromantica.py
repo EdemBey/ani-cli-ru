@@ -30,25 +30,38 @@ class Anime(BaseAnimeHTTP):
         params = self._kwargs_pop_params(kwargs, anime_name=search)
         return self.api_request(api_method="animesearch",  params=params, **kwargs)
 
-    def get_updates(self) -> dict:
-        return self.api_request(api_method="ongoing")
-
     def episode_reparse(self, *args, **kwargs):
         raise NotImplementedError
 
     def search(self, q: str) -> ResultList[BaseAnimeResult]:
         return AnimeResult.parse(self.search_titles(search=q))
 
-
     def episodes(self, result: Union[AnimeResult, Ongoing], *args, **kwargs) -> ResultList[BaseEpisode]:  # type: ignore
         anime_id = result.anime_id
         path = "anime/{}/episodes".format(anime_id)
         req = self.api_request(api_method=path)
-        return Episode.parse({"episodes": req})  # signature fix issue
+        return Episode.parse(req)  # signature fix issue
 
-    def players(self, *args, **kwargs) -> ResultList[BasePlayer]:
-        raise NotImplementedError("Get this object from Episode object")
-
+    def players(self, episode: Episode) -> ResultList[Player]:  # type: ignore
+        resp = self.session.get(episode.embed).text
+        links = self.get_links(resp)
+        return Player.parse(links)
+    
+    # parsing m3u8 to get links of different quality
+    def get_quality(self, input_string, host):
+        pattern = r'RESOLUTION=\d+x(\d+)\n(.*?)\.m3u8'
+        matches = re.findall(pattern, input_string)
+        matches = sorted(matches, key=lambda x: int(x[0]), reverse=True)
+        result = [{'key': match[0]+'p', 'url': '{}/{}.m3u8'.format(host, match[1])} for match in matches]
+        return result
+    
+    def get_links(self, data: str):
+        playlist = re.search(r'"file":"([^"]+)"', data).group(1)
+        host = playlist.rsplit('/', 1)[0]
+        playlist_data = self.session.request('GET', playlist).text
+        quality_list = self.get_quality(playlist_data, host)
+        return quality_list
+    
     def get_video(self, player_url: str, quality: int = 720, *, referer: str = ""):
         raise NotImplementedError("Get video from Player object")
 
@@ -61,12 +74,11 @@ class Player(BaseJsonParser):
     def __str__(self):
         return self.key
     
-
     def get_video(self, *args, **kwargs):
         return self.url
 
 
-class Episode(BaseJsonParser):
+class Episode(BaseJsonParser, BaseEpisode):
     ANIME_HTTP = Anime()
     KEYS = ('embed', 'episode_anime', 'episode_count', 'episode_id', 'episode_type', 'episode_view')
     embed: str
@@ -81,46 +93,6 @@ class Episode(BaseJsonParser):
         type = "Озвучка" if (self.episode_type) else "Субтитры"
         return "Серия {} - {}".format(self.episode_count, type)
 
-    @classmethod
-    def parse(cls, response) -> ResultList:
-        """class object factory
-
-        :param response: json response
-        :return: ResultList with objects
-        """
-
-        rez = []
-        if isinstance(response["episodes"], list):  # type: ignore
-            for data in response["episodes"]:  # type: ignore
-                c = cls()
-                for k in data.keys():
-                    if k in cls.KEYS:
-                        setattr(c, k, data[k])
-                rez.append(c)
-            sorted_rez = sorted(rez, key=lambda x: x.episode_count)
-        return sorted_rez
-
-    def get_quality(self, input_string, host):
-        pattern = r'RESOLUTION=\d+x(\d+)\n(.*?)\.m3u8'
-        matches = re.findall(pattern, input_string)
-        matches = sorted(matches, key=lambda x: int(x[0]), reverse=True)
-        result = [{'key': match[0]+'p', 'url': '{}/{}.m3u8'.format(host, match[1])} for match in matches]
-        return result
-    
-    def get_playlist(self, *args, **kwargs):
-        with self.ANIME_HTTP as a:
-            anime_data = a.session.request('GET', self.embed).text
-            playlist = re.search(r'"file":"([^"]+)"', anime_data).group(1)
-            host = playlist.rsplit('/', 1)[0]
-            playlist_data = a.session.request('GET', playlist).text
-            quality_list = self.get_quality(playlist_data, host)
-            return quality_list
-        
-    def player(self) -> ResultList[Player]:
-        rez = []
-        playlist = self.get_playlist()
-        rez.extend(Player.parse(playlist))
-        return rez
 
 class AnimeResult(BaseJsonParser):
     ANIME_HTTP = Anime()
