@@ -12,7 +12,8 @@ from anicli_ru.loader import all_extractors
 
 print(all_extractors())  # вывод всех доступных парсеров из директории extractors
 a = Anime()
-results = a.search("Chainsaw man")  # поиск тайтла по названию
+results = a.search("naruto")  # поиск тайтла по названию
 episodes = results[0].episodes()    # получить эпизоды с первого найденного тайтла
 players = episodes[0].player()  # получить сырые ссылки на видеохостниги (не прямую ссылку на видео)
-print(players[0].get_video())  # получить прямую ссылку на видео с видеохостинга для плеера
+video = players[0].get_video(quality=480)  # получить прямую ссылку на видео с видеохостинга для плеера
+print(video)

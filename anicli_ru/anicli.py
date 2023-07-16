@@ -83,9 +83,12 @@ class Menu:
 
     def choose_dub(self, results: API.ResultList[API.Player]):
         while self.is_back:
-            self._print_enumerate(results)
-            print("Choose dub:", 1, "-", len(results))
-            command = input(f"c_d [1-{len(results)}] > ")
+            if len(results) <= 1:
+                command = '1'
+            else:
+                self._print_enumerate(results)
+                print("Choose dub:", 1, "-", len(results))
+                command = input(f"c_d [1-{len(results)}] > ")
             if self.command_is_digit(command):
                 command = int(command)
                 if command <= len(results):
@@ -184,8 +187,11 @@ class Menu:
         elif Aniboom.is_aniboom(player.url):
             # Экспериментально выявлено одним из пользователей,
             # что заголовок Accept-Language увеличивает скорость загрузки в MPV плеере в данном балансере
-            run_player(url, commands=('--referrer="https://aniboom.one/"',
-                                      '--http-header-fields="Accept-Language: ru-RU,ru"'))
+            mpv_commands = '--referrer="https://aniboom.one/"', '--http-header-fields="Accept-Language: ru-RU,ru"'
+            iina_commands ='--mpv-referrer="https://aniboom.one/"', ' '
+            vlc_commands = '--http-referrer="https://aniboom.one/"', ' '
+            run_player(url, commands=iina_commands if PLAYER == 'iina' else vlc_commands if PLAYER == 'vlc' else mpv_commands)
+
         else:
             run_player(url)
 

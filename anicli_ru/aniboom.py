@@ -71,10 +71,8 @@ class Aniboom:
         raw_aniboom_response = unescape(raw_aniboom_response)
         if mpd and (url := AniboomDefaults.RE_MPD.findall(raw_aniboom_response)):
             return url[0].replace("\\", "")
-        if quality not in AniboomDefaults.QUALITY or quality == 1080:
-            return AniboomDefaults.RE_M3U8.findall(raw_aniboom_response)[0].replace("\\", "")
         else:
-            return cls._set_quality(AniboomDefaults.RE_M3U8.findall(raw_aniboom_response)[0].replace("\\", ""), quality)
+            return AniboomDefaults.RE_M3U8.findall(raw_aniboom_response)[0].replace("\\", "")
 
     @classmethod
     def parse(cls, aniboom_player_url: str, *,

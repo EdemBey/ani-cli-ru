@@ -7,13 +7,11 @@ import re
 class Anime(BaseAnimeHTTP):
     BASE_URL = "https://jut.su"
     INSTANT_KEY_REPARSE = True
-    SEARCH_URL = 'https://yandex.ru/search/site/'
+    SEARCH_URL = 'https://jut.su/anime/'
 
     def search(self, q: str) -> ResultList[AnimeResult]:  # type: ignore
-        text = '{} -episode -anime'.format(q)
-        resp = self.session.get(f"{self.SEARCH_URL}", params={"searchid": 1893616, 
-                                                              "url": self.BASE_URL,
-                                                              "text":  text}).text
+        # text = '{} -episode -anime'.format(q)
+        resp = self.session.post(f"{self.SEARCH_URL}", data={"show_search": q}).text
         return AnimeResult.parse(resp)
 
     def ongoing(self) -> ResultList[Ongoing]:  # type: ignore
@@ -34,7 +32,7 @@ class Anime(BaseAnimeHTTP):
 
 class AnimeResult(BaseAnimeResult):
     REGEX = {"url": re.compile(r'<a\s+class="b-serp-item__title-link"\s+href="([^"]+)"'),
-             "title": re.compile(r'<h3\s+class="b-serp-item__title"[^>]*>\s*<a[^>]*>\s*<span>(.*?)</span>\s*</a>\s*</h3>'),
+             "title": re.compile(r'<div class="aaname">(.*?)</div>'),
             #  "type": re.compile(r'type/(.*?)">')
              }
     ANIME_HTTP = Anime()

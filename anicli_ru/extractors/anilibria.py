@@ -75,16 +75,20 @@ class Anime(BaseAnimeHTTP):
         raise NotImplementedError("Get video from Player object")
 
 
-class Player(BaseJsonParser):
-    KEYS = ('key', 'url')
-    key: str
-    url: str
+class Player(BaseJsonParser, BasePlayer):
+    url = ''
+    quality: dict
 
     def __str__(self):
         return self.key
-
-    def get_video(self, *args, **kwargs) -> str:
-        return self.url
+    
+    @classmethod
+    def parse(cls, result: dict) -> ResultList:
+        return[cls(**result)]
+    
+    def get_video(self, quality: int = 1080, *args, **kwargs) -> str:
+        i = sorted(k for k in self.quality if k >= quality)
+        return  self.quality[next(iter(i), max(self.quality, key=int))]
 
 
 class Episode(BaseJsonParser):
@@ -101,12 +105,13 @@ class Episode(BaseJsonParser):
 
     def player(self) -> ResultList[Player]:
         # {url: str, key: str}
-        rez = []
+        rez = {'quality': {}}
         for k, v in self.hls.items():
             if v:  # value maybe equal None
                 url = self.host + v if self.host.startswith("http") else f"https://{self.host}{v}"
-                rez.extend(Player.parse({"url": url, "key": k}))
-        return rez
+                k = {'fhd': 1080, 'hd': 720}.get(k, 480)
+                rez['quality'][k] = url
+        return Player.parse(rez)
 
 
 class AnimeResult(BaseJsonParser):

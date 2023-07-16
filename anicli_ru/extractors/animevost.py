@@ -44,70 +44,59 @@ class Anime(BaseAnimeHTTP):
         return Ongoing.parse(self.get_updates())
 
     def episodes(self, result: Union[AnimeResult, Ongoing], *args, **kwargs) -> ResultList[BaseEpisode]:  # type: ignore
-        req = self.api_request(api_method="playlist", request_method="POST", data={'id': result.id})
-        return Episode.parse({"episodes": req, "series": result.series})  # signature fix issue
+        return Episode.parse(result.series)  # signature fix issue
 
-    def players(self, *args, **kwargs) -> ResultList[BasePlayer]:
-        raise NotImplementedError("Get this object from Episode object")
+    def players(self,result: Episode, *args, **kwargs) -> ResultList[BasePlayer]:
+        res = {'quality': {}}
+        host = 'https://fhd.trn.su/'
+        mp4 = str(result.episode_id)+'.mp4'  
+        sd = 'https://static.trn.su/'
+        req = self.session.get(host+mp4)
+        res['quality'] = {480: sd+mp4} if req.status_code == 404 else {1080: f"{host}1080/{mp4}", 720: f"{host}720/{mp4}", 480: host+mp4}
+        return Player.parse(res)
 
     def get_video(self, player_url: str, quality: int = 720, *, referer: str = ""):
         raise NotImplementedError("Get video from Player object")
 
 
-class Player(BaseJsonParser):
-    KEYS = ('key', 'url')
-    key: str
-    url: str
+class Player(BaseJsonParser, BasePlayer):
+    url = ''
+    quality: dict
 
     def __str__(self):
         return self.key
 
-    def get_video(self, *args, **kwargs) -> str:
-        return self.url
+    @classmethod
+    def parse(cls, result: dict) -> ResultList:
+        return[cls(**result)]
+    
+    def get_video(self, quality: int = 1080, *args, **kwargs) -> str:
+        i = sorted(k for k in self.quality if k >= quality)
+        return  self.quality[next(iter(i), max(self.quality, key=int))]
 
 
-class Episode(BaseJsonParser):
+class Episode(BaseJsonParser, BaseEpisode):
+    ANIME_HTTP = Anime()
     KEYS = ('std', 'preview', 'name', 'hd')
-    std: str
-    preview: str
     name: str
-    hd: str
+    episode_id: str
 
     @staticmethod
-    def sorting_series(series, sort_series):
-        name = series.name
+    def sorting_series(sort_series):
         replace = sort_series.replace("\'", "\"")
-        jsn = json.loads(replace)
-        sort = list(jsn.keys())
-        return sort.index(name)
+        items = json.loads(replace).items()
+        return list(items)
 
     def __str__(self):
         return self.name
 
     @classmethod
-    def parse(cls, response) -> ResultList:
-        """class object factory
+    def parse(cls, series) -> ResultList:
+        episodes_list = cls.sorting_series(series)
+        req = [cls(**{'name': k, 'episode_id': v}) for k, v in episodes_list]
+        return req
 
-        :param response: json response
-        :return: ResultList with objects
-        """
-        # response = sorted(response, key=lambda k: cls.sorting_series(k['name']))
-        rez = []
-        if isinstance(response["episodes"], list):  # type: ignore
-            for data in response["episodes"]:  # type: ignore
-                c = cls()
-                for k in data.keys():
-                    if k in cls.KEYS:
-                        setattr(c, k, data[k])
-                rez.append(c)
-            rez.sort(key=lambda name: cls.sorting_series(name, response["series"]))
-        return rez
-
-    def player(self) -> ResultList[Player]:
-        rez = []
-        rez.extend(Player.parse([{'key': 'hd (720p)', 'url': self.hd},
-                                 {'key': 'std (480p)', 'url': self.std}]))
-        return rez
+ 
 
 
 class AnimeResult(BaseJsonParser):
