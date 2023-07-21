@@ -2,6 +2,7 @@ from __future__ import annotations
 import re
 from typing import Union
 
+
 from anicli_ru.base import *
 
 
@@ -35,6 +36,16 @@ class Anime(BaseAnimeHTTP):
 
     def search(self, q: str) -> ResultList[BaseAnimeResult]:
         return AnimeResult.parse(self.search_titles(search=q))
+    
+   
+        
+        # to get anime from full Name
+    def get_anime(self, name):
+        pattern = r'\[.*(\d+)\]'
+        match = re.search(pattern, name)
+        # name = re.sub(r'\[.-(\d+)\]',  r'\[*\d', name)
+        name_fix = re.sub(pattern, match.group(1), name)
+        return self.search(name_fix)[0]
 
     def episodes(self, result: Union[AnimeResult, Ongoing], *args, **kwargs) -> ResultList[BaseEpisode]:  # type: ignore
         anime_id = result.anime_id
@@ -73,7 +84,7 @@ class Player( BaseJsonParser ):
     url: str
 
     def __str__(self):
-        type = "Озвучка" if (self.episode_type) else "Субтитры"
+        type = "Озвучка SovetRomantica" if (self.episode_type) else "Субтитры SovetRomantica"
         return "Серия {} - {}".format(self.episode_count, type)
     
     def get_video(self, quality: int = 1080, *args, **kwargs):
@@ -93,11 +104,11 @@ class Episode(BaseJsonParser, BaseEpisode):
     def parse(cls, list: list) -> ResultList:
         return [cls(**{'episode_type': str(i), 'count': len(group), 'videos': group})
                 for i in range(2)
-                    for group in [[item for item in list if item['episode_type'] == i]]]  # dub id  # dub name  # count videos
+                    for group in [[item for item in list if item['episode_type'] == i]]if len(group) > 0]  # dub id  # dub name  # count videos
 
 
     def __str__(self):
-        type = "Озвучка" if (self.episode_type) else "Субтитры"
+        type = "Озвучка SovetRomantica" if (self.episode_type) else "Субтитры SovetRomantica"
         return "{} count: {}".format(type, self.count)
 
 
@@ -118,7 +129,10 @@ class AnimeResult(BaseJsonParser):
     anime_year: int
 
     def __str__(self):
-        return self.anime_name_russian
+        try:
+            return self.anime_name_russian
+        except:
+            return "no results"
 
     def episodes(self):
         with self.ANIME_HTTP as a:

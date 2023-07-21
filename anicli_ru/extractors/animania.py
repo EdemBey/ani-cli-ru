@@ -56,7 +56,8 @@ class Anime(BaseAnimeHTTP):
 class AnimeResult(BaseAnimeResult):
     ANIME_HTTP = Anime()
     REGEX = {"url": re.compile(r'<a class="short-poster img-box" href="(.*?\.html)" data-title=".*?: .*?"'),
-             "title": re.compile(r'<a class="short-poster img-box" href=".*?\.html" data-title=".*?: (.*?)"')}
+             "title": re.compile(r'<a class="short-poster img-box" href=".*?\.html" data-title=".*?: (.*?)"'),
+             }
     url: str
     title: str
 

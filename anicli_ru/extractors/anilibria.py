@@ -59,20 +59,17 @@ class Anime(BaseAnimeHTTP):
     def episode_reparse(self, *args, **kwargs):
         raise NotImplementedError
 
+    def get_anime(self, name):
+
+        try:
+            result =  self.search(name)[0]
+            return EpisodeList.parse(result)
+        except:
+            return []
+        
     def search(self, q: str) -> ResultList[BaseAnimeResult]:
         return AnimeResult.parse(self.search_titles(search=q))
 
-    def ongoing(self, *args, **kwargs) -> ResultList[BaseOngoing]:
-        return Ongoing.parse(self.get_updates())
-
-    def episodes(self, *args, **kwargs) -> ResultList[BaseEpisode]:
-        raise NotImplementedError("Get this object from Ongoing or AnimeResult object")
-
-    def players(self, *args, **kwargs) -> ResultList[BasePlayer]:
-        raise NotImplementedError("Get this object from Episode object")
-
-    def get_video(self, player_url: str, quality: int = 720, *, referer: str = ""):
-        raise NotImplementedError("Get video from Player object")
 
 
 class Player(BaseJsonParser, BasePlayer):
@@ -80,7 +77,7 @@ class Player(BaseJsonParser, BasePlayer):
     quality: dict
 
     def __str__(self):
-        return self.key
+        return f"Серия {self.serie}"
     
     @classmethod
     def parse(cls, result: dict) -> ResultList:
@@ -111,6 +108,7 @@ class Episode(BaseJsonParser):
                 url = self.host + v if self.host.startswith("http") else f"https://{self.host}{v}"
                 k = {'fhd': 1080, 'hd': 720}.get(k, 480)
                 rez['quality'][k] = url
+                rez['serie'] = self.serie
         return Player.parse(rez)
 
 
@@ -145,7 +143,20 @@ class AnimeResult(BaseJsonParser):
         playlist = list(self.player["playlist"].values())
         return Episode.parse(playlist)
 
+class EpisodeList(BaseJsonParser, BaseEpisode):
 
+    @classmethod
+    def parse(cls, result:AnimeResult) -> ResultList[Episode]:
+        return [cls(**{"names": result.names, "play":result.player})]
+    
+    def player(self)-> ResultList[Player]:
+        anime = AnimeResult.parse({'player':self.play})[0]
+        episodes = AnimeResult.episodes(anime)
+        return sum((Episode.player(i) for i in episodes), [])
+
+    def __str__(self):
+        return f"Плеер AniLibria count: {self.play['series']['last']}"
+    
 class Ongoing(AnimeResult):
     # response equal AnimeResult object
     pass

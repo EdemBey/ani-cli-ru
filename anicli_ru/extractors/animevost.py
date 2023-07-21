@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import Union
 import json
 
+
 from anicli_ru.base import *
 
 
@@ -29,7 +30,16 @@ class Anime(BaseAnimeHTTP):
     def search_titles(self, search: str, **kwargs) -> dict:
         params = self._kwargs_pop_params(kwargs, name=search)
         return self.api_request(api_method="search", request_method="POST", data=params, **kwargs)['data']
-
+    
+    def get_anime(self, anime):
+        try:
+            anime_name = anime.anime_name.split('(')[0].strip()
+            params = {'year':str(anime.anime_year)}
+            anime = EpisodeList.parse(self.search_titles(anime_name, params=params))[0]
+            return [anime]
+        except:
+            return []
+        
     def get_updates(self, *, limit: int = 20, **kwargs) -> dict:
         params = self._kwargs_pop_params(kwargs, page=1, quantity=limit)
         return self.api_request(api_method="last", params=params, **kwargs)['data']
@@ -51,8 +61,9 @@ class Anime(BaseAnimeHTTP):
         host = 'https://fhd.trn.su/'
         mp4 = str(result.episode_id)+'.mp4'  
         sd = 'https://static.trn.su/'
-        req = self.session.get(host+mp4)
+        req = self.session.request('HEAD',host+mp4)
         res['quality'] = {480: sd+mp4} if req.status_code == 404 else {1080: f"{host}1080/{mp4}", 720: f"{host}720/{mp4}", 480: host+mp4}
+        res['seria'] = result.name
         return Player.parse(res)
 
     def get_video(self, player_url: str, quality: int = 720, *, referer: str = ""):
@@ -64,7 +75,7 @@ class Player(BaseJsonParser, BasePlayer):
     quality: dict
 
     def __str__(self):
-        return self.key
+        return self.seria
 
     @classmethod
     def parse(cls, result: dict) -> ResultList:
@@ -130,3 +141,17 @@ class AnimeResult(BaseJsonParser):
 class Ongoing(AnimeResult):
     # response equal AnimeResult object
     pass
+
+class EpisodeList(BaseJsonParser, BaseEpisode):
+    KEYS = ('id', 'description', 'isFavorite', 'rating', 'series', 'director', 'urlImagePreview', 'year',
+            'genre', 'votes', 'title', 'timer', 'type', 'isLikes', 'screenImage')
+    ANIME_HTTP = Anime()
+
+    def player(self)-> ResultList[Player]:
+        episodes = AnimeResult.episodes(self)
+        return sum((Episode.player(i) for i in episodes), [])
+
+    def __str__(self):
+        return "Плеер AnimeVost"
+
+    
