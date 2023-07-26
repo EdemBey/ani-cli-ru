@@ -36,7 +36,7 @@ class Anime(BaseAnimeHTTP):
         result_animania = self.Animania.episodes(result)
         result_anilibria = self.Anilibria.get_anime(result.title)
         result_animevost = self.Animevost.get_anime(sovetromantica_anime)
-        result_sovetromantica = sovetromantica_anime.episodes()
+        result_sovetromantica = sovetromantica_anime.episodes() if len(sovetromantica_anime)>0 else []
 
         return result_animevost + result_anilibria + result_sovetromantica + result_animania
 

@@ -35,17 +35,20 @@ class Anime(BaseAnimeHTTP):
         raise NotImplementedError
 
     def search(self, q: str) -> ResultList[BaseAnimeResult]:
-        return AnimeResult.parse(self.search_titles(search=q))
+        result = self.search_titles(search=q)
+        return AnimeResult.parse(result if isinstance(result, list) else [])
     
    
         
         # to get anime from full Name
     def get_anime(self, name):
-        pattern = r'\[.*(\d+)\]'
-        match = re.search(pattern, name)
-        # name = re.sub(r'\[.-(\d+)\]',  r'\[*\d', name)
-        name_fix = re.sub(pattern, match.group(1), name)
-        return self.search(name_fix)[0]
+        try:
+            pattern = r'\[.*(\d+)\]'
+            match = re.search(pattern, name)
+            name_fix = re.sub(pattern, match.group(1), name)
+        except:
+            name_fix = name
+        return self.search(name_fix)
 
     def episodes(self, result: Union[AnimeResult, Ongoing], *args, **kwargs) -> ResultList[BaseEpisode]:  # type: ignore
         anime_id = result.anime_id

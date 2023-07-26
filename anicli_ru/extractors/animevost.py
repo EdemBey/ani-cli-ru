@@ -33,7 +33,7 @@ class Anime(BaseAnimeHTTP):
     
     def get_anime(self, anime):
         try:
-            anime_name = anime.anime_name.split('(')[0].strip()
+            anime_name = anime[0].anime_name.split('(')[0].strip()
             params = {'year':str(anime.anime_year)}
             anime = EpisodeList.parse(self.search_titles(anime_name, params=params))[0]
             return [anime]
